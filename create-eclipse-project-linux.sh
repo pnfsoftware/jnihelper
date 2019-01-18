@@ -1,2 +1,2 @@
 #!/bin/sh
-python scripts/generateEclipseProjectFilesForPlugin.py jeb-plugin-android-jni-helper
+python scripts/generateEclipseProjectFilesForPlugin.py $1

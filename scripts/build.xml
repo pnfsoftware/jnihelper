@@ -9,15 +9,14 @@ Requirements:
 
 <project basedir=".." default="build" name="jebplugin">
 
-    <fail message="Set the plugin version number: ant -Dversion=x.y.z">
+    <fail message="Set the plugin version number: -DpluginVersion=x.y.z">
       <condition>
         <not>
-          <isset property="version"/>
+          <isset property="pluginVersion"/>
         </not>
       </condition>
     </fail>
-
-    <echo message="Plugin version: ${version}"/>
+    <echo message="Plugin version: ${pluginVersion}"/>
 
     <property environment="env"/>
     <echo message="JEB_HOME: ${env.JEB_HOME}"/>
@@ -39,8 +38,8 @@ Requirements:
 
     <!-- Mandatory properties -->
     <property name="src" value="src"/>
-    <property name="outfile" value="out/JebDynamicJNIDetectionPlugin-${version}.jar"/>
-    <property name="entryclass" value="com.pnf.plugin.androidjnihelper.DynamicJNIDetectionPlugin"/>
+    <property name="outfile" value="out/${pluginFilename}-${pluginVersion}.jar"/>
+    <property name="entryclass" value="${pluginClassname}"/>
     <!-- External libraries, for build process (semi-colon separated) -->
     <property name="extcp_build" value=""/>
     <!-- External libraries, for Manifest (space separated) -->
@@ -86,7 +85,7 @@ Requirements:
             <manifest>
                 <attribute name="Class-Path" value="${extcp_manifest}"/>
                 <attribute name="JebPlugin-entryclass" value="${entryclass}"/>
-                <attribute name="JebPlugin-version" value="${version}"/>
+                <attribute name="JebPlugin-version" value="${pluginVersion}"/>
             </manifest>
             <fileset dir="bin"/>
             <!-- copy resources -->
