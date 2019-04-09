@@ -50,7 +50,7 @@ public class DynamicJNIDetectionHeurFromSignature implements IDynamicJNIDetectio
         for(INativeStringItem str: codeUnit.getStrings()) {
             String sig = str.getValue();
             if(sig.startsWith("(") && sig.contains(")")) {
-                logger.i("JNI matching arg %s found @%Xh", str.getValue(), str.getBegin());
+                logger.info("JNI matching arg %s found @%Xh", str.getValue(), str.getBegin());
                 // get xref from string, this is generally the pointer array+1
                 Set<? extends IReference> xrefs = codeUnit.getCodeModel().getReferenceManager()
                         .getReferencesToTarget(str.getBegin());

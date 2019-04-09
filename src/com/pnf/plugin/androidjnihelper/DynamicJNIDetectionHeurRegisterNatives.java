@@ -109,9 +109,9 @@ public class DynamicJNIDetectionHeurRegisterNatives implements IDynamicJNIDetect
                             long ptrMethods0;
                             try {
                                 nMethods = (int)targets[1].evaluateUnsignedLong(state);
-                                logger.i("Number of methods: %d", nMethods);
+                                logger.info("Number of methods: %d", nMethods);
                                 ptrMethods0 = (int)targets[0].evaluateUnsignedLong(state);
-                                logger.i("Pointer to methods: %xh", ptrMethods0);
+                                logger.info("Pointer to methods: %xh", ptrMethods0);
                             }
                             catch(Exception e) {
                                 logger.error("Can not determine parameters of RegisterNatives method in block @%xh",
@@ -145,7 +145,7 @@ public class DynamicJNIDetectionHeurRegisterNatives implements IDynamicJNIDetect
                 String label = codeUnit.getAddressLabel(Formatter.toHexString(targetAddress, false) + "h");
                 // expect a method named *RegisterNatives*
                 if(label != null && label.contains("RegisterNatives")) {
-                    logger.i("Found potential RegisterNatives call @%xh", address);
+                    logger.debug("Found potential RegisterNatives call @%xh", address);
                     return true;
                 }
             }

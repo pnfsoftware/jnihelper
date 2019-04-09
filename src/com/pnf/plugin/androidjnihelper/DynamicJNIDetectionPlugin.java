@@ -72,7 +72,9 @@ import com.pnfsoftware.jeb.util.logging.ILogger;
 public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
     static final ILogger logger = GlobalLog.getLogger(DynamicJNIDetectionPlugin.class);
 
-    IDynamicJNIDetectionHeuritic[] heuristics = { // list of heuristics used
+    private JNIReport report;
+
+    private IDynamicJNIDetectionHeuritic[] heuristics = { // list of heuristics used
             new DynamicJNIDetectionHeurRegisterNatives(), // EP JNI_OnLoad
             new DynamicJNIDetectionHeurFromMethodName(), // EP Method name strings
             new DynamicJNIDetectionHeurFromSignature(), // EP Signature
@@ -88,12 +90,16 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
     @Override
     public void execute(IEnginesContext context, Map<String, String> executionOptions) {
         try {
+            report = new JNIReport();
             executeInternal(context, executionOptions);
         }
         catch(Exception e) {
             logger.error("An error occurred while executing the plugin");
             logger.catchingSilent(e);
             JebCoreService.notifySilentExceptionToClient(e);
+        }
+        finally {
+            logger.info(report.getReport());
         }
     }
 
@@ -127,6 +133,8 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                     if(so instanceof IELFUnit) {
                         // check for JNI_OnLoad method
                         IELFUnit elf = (IELFUnit)so;
+                        logger.debug("Processing %s:%s", elf.getName(),
+                                elf.getLoaderInformation().getTargetProcessor());
                         ISymbolInformation onload = null;
                         List<? extends ISymbolInformation> symbols = elf.getExportedSymbols();
                         for(ISymbolInformation sym: symbols) {
@@ -188,7 +196,8 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                                     String[] names = DexUtil.toJniName(sig);
                                     for(String name: names) {
                                         if(name.equals(sym.getName())) {
-                                            logger.i("Found static JNI method: %s", sym.getName());
+                                            logger.debug("Found static JNI method: %s", sym.getName());
+                                            report.saveStaticMethod(apk, elf, sig, candidate.getName(), sym);
                                             nativeMethods.remove(i);
                                             break;
                                         }
@@ -202,7 +211,8 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                     for(int i = 0; i < nativeMethods.size(); i++) {
                         IDexMethod m = nativeMethods.get(i);
                         String methodName = m.getSignature(true);
-                        logger.i("JNI method not found: %s", methodName);
+                        logger.debug("JNI method not found: %s", methodName);
+                        report.saveMissingMethod(apk, methodName, candidate.getName());
                     }
                 }
             }
@@ -342,11 +352,16 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
 
         // rename native method
         INativeMethodItem method = (INativeMethodItem)item;
-        if(method.getName(true).startsWith("sub_") && !jni.name.startsWith("sub_")) {
-            String methodName = "__jni_" + jni.name + "_" + jni.signature;
+        String oldMethodName = method.getName(true);
+        String methodName = null;
+        if(oldMethodName.startsWith("sub_") && !jni.name.startsWith("sub_")) {
+            methodName = "__jni_" + jni.name + "_" + jni.signature;
             // validate that function name does not already exist
             if(codeUnit.getMethod(methodName) == null) {
                 method.setName(methodName);
+                if(method.getName(true).startsWith("__jni_")) {
+                    logger.debug("Method %s was renamed to %s", oldMethodName, methodName);
+                }
             }
         }
 
@@ -357,6 +372,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
             codeUnit.setDataTypeAt(jni.ptrSignature, dataType);
             codeUnit.setDataTypeAt(jni.ptrFnPtr, dataType);
         }
+        report.saveDynamicMethodMatch(apk, elf, signature, libName, jni, oldMethodName, methodName);
         return true;
     }
 

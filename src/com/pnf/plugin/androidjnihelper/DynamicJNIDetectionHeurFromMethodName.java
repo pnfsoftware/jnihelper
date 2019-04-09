@@ -49,7 +49,7 @@ public class DynamicJNIDetectionHeurFromMethodName implements IDynamicJNIDetecti
         for(INativeStringItem str: codeUnit.getStrings()) {
             for(IDexMethod m: nativeMethods) {
                 if(m.getName(true).equals(str.getValue())) {
-                    logger.i("JNI matching method name %s found @%Xh", str.getValue(), str.getBegin());
+                    logger.info("JNI matching method name %s found @%Xh", str.getValue(), str.getBegin());
                     // get xref from string, this is generally the pointer array
                     Set<? extends IReference> xrefs = codeUnit.getCodeModel().getReferenceManager()
                             .getReferencesToTarget(str.getBegin());
