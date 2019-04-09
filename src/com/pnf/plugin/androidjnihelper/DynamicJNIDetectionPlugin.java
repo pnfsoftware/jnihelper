@@ -129,6 +129,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                     continue;
                 }
 
+                List<JNINativeMethod> allFunctions = new ArrayList<>();
                 for(IUnit so: sos) {
                     if(so instanceof IELFUnit) {
                         // check for JNI_OnLoad method
@@ -172,17 +173,16 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                         // heuristic1
                         for(IDynamicJNIDetectionHeuritic h: heuristics) {
                             List<JNINativeMethod> functions = h.determine(codeUnit, nativeMethods, onload);
-                            for(JNINativeMethod jni: functions) {
-                                processJNIMethod(apk, elf, codeUnit, nativeMethods, jni);
-                            }
-                            if(nativeMethods.isEmpty()) {
-                                break;
-                            }
+                            allFunctions.addAll(functions);
                         }
                     } // else not an ELF?
                     else {
                         logger.error("Can not proceed with unit %s", so);
                     }
+                }
+                sanitize(allFunctions);
+                for(JNINativeMethod jni: allFunctions) {
+                    processJNIMethod(apk, nativeMethods, jni, candidate.getName());
                 }
 
                 // postprocess: Remove static method definitions
@@ -218,6 +218,35 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                         report.saveMissingMethod(apk, methodName, candidate.getName());
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Remove duplicates
+     * 
+     * @param functions
+     */
+    private void sanitize(List<JNINativeMethod> functions) {
+        for(int i = 0; i < functions.size(); i++) {
+            boolean removeAtEnd = false;
+            JNINativeMethod elt1 = functions.get(i);
+            for(int j = i + 1; j < functions.size(); j++) {
+                JNINativeMethod elt2 = functions.get(j);
+                if(elt1.name.equals(elt2.name) && elt1.signature.equals(elt2.signature)) {
+                    functions.remove(j);
+                    j--;
+                    // same code Unit and address => remove duplicate
+                    if(elt1.codeUnit != elt2.codeUnit || elt1.fnPtr != elt2.fnPtr) {
+                        // same native method locates several places
+                        removeAtEnd = true;
+                    }
+                }
+            }
+            if(removeAtEnd) {
+                logger.error("Found duplicate native method references for %s", elt1.name);
+                functions.remove(i);
+                i--;
             }
         }
     }
@@ -301,15 +330,15 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
 
     // ----------------------------- JNI processing -------------------------//
 
-    protected boolean processJNIMethod(IApkUnit apk, IUnit elf, INativeCodeUnit<?> codeUnit,
-            List<IDexMethod> nativeMethods, JNINativeMethod jni) {
-        logger.info("JNI Method: %s %s %xh", jni.name, jni.signature, jni.fnPtr);
+    protected boolean processJNIMethod(IApkUnit apk, List<IDexMethod> nativeMethods, JNINativeMethod jni,
+            String libName) {
+        logger.debug("JNI Method: %s %s %xh", jni.name, jni.signature, jni.fnPtr);
         boolean thumb = (jni.fnPtr & 1) != 0;
         String methodAddress = Long.toHexString(thumb ? jni.fnPtr - 1: jni.fnPtr) + "h";
 
         // add comment in Native code
         String newComment = Strings.f("JNI method Detected: %s %s", jni.name, jni.signature);
-        appendComment(codeUnit, methodAddress, newComment);
+        appendComment(jni.codeUnit, methodAddress, newComment);
 
         // add comment in Dalvik
         IDexUnit dex = apk.getDex();
@@ -318,35 +347,34 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
             logger.error("Can not define JNI method @%Xh", jni.fnPtr);
             return false;
         }
-        else {
-            newComment = Strings.f("%s is registered dynamically, it references native routine @%Xh in file %s/%s",
-                    jni.name, jni.fnPtr, elf.getParent().getName(), elf.getName());
-            appendComment(dex, m.getAddress(), newComment);
+        IUnit elf = (IUnit)jni.codeUnit.getParent();
+        newComment = Strings.f("%s is registered dynamically, it references native routine @%Xh in file %s/%s",
+                jni.name, jni.fnPtr, elf.getParent().getName(), elf.getName());
+        appendComment(dex, m.getAddress(), newComment);
 
-            String signature = m.getSignature(true);
-            List<IJniEndpoint> endpoints = apk.dynamic().getJniMethods(signature);
-            boolean alreadyDefined = false;
-            if(endpoints != null) {
-                for(IJniEndpoint endpoint: endpoints) {
-                    if(!endpoint.isStatic()) {
-                        if(endpoint.getUnit() == elf) {
-                            alreadyDefined = true;
-                            break;
-                        }
+        String signature = m.getSignature(true);
+        List<IJniEndpoint> endpoints = apk.dynamic().getJniMethods(signature);
+        boolean alreadyDefined = false;
+        if(endpoints != null) {
+            for(IJniEndpoint endpoint: endpoints) {
+                if(!endpoint.isStatic()) {
+                    if(endpoint.getUnit() == elf) {
+                        alreadyDefined = true;
+                        break;
                     }
                 }
             }
-            if(!alreadyDefined) {
-                apk.dynamic().registerDynamicJni(signature, elf, jni.fnPtr);
-            }
+        }
+        if(!alreadyDefined) {
+            apk.dynamic().registerDynamicJni(signature, elf, jni.fnPtr);
         }
 
         // define method at JNI address if nothing defined
-        INativeItem item = codeUnit.getItemObject(codeUnit.getItemAtAddress(methodAddress));
+        INativeItem item = jni.codeUnit.getItemObject(jni.codeUnit.getItemAtAddress(methodAddress));
         if(item == null || !(item instanceof INativeMethodItem)) {
             // define method
-            codeUnit.setRoutineAt(jni.fnPtr);
-            item = codeUnit.getItemObject(codeUnit.getItemAtAddress(methodAddress));
+            jni.codeUnit.setRoutineAt(jni.fnPtr);
+            item = jni.codeUnit.getItemObject(jni.codeUnit.getItemAtAddress(methodAddress));
             if(item == null || !(item instanceof INativeMethodItem)) {
                 logger.error("Can not define JNI method @%Xh", jni.fnPtr);
                 return true;
@@ -360,7 +388,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
         if(oldMethodName.startsWith("sub_") && !jni.name.startsWith("sub_")) {
             methodName = "__jni_" + jni.name + "_" + jni.signature;
             // validate that function name does not already exist
-            if(codeUnit.getMethod(methodName) == null) {
+            if(jni.codeUnit.getMethod(methodName) == null) {
                 method.setName(methodName);
                 if(method.getName(true).startsWith("__jni_")) {
                     logger.debug("Method %s was renamed to %s", oldMethodName, methodName);
@@ -369,11 +397,11 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
         }
 
         // define pointers
-        INativeType dataType = codeUnit.getTypeManager().getType("void*");
+        INativeType dataType = jni.codeUnit.getTypeManager().getType("void*");
         if(dataType != null) {
-            codeUnit.setDataAt(jni.ptrName, dataType, "__jni_ptr_" + jni.name);
-            codeUnit.setDataTypeAt(jni.ptrSignature, dataType);
-            codeUnit.setDataTypeAt(jni.ptrFnPtr, dataType);
+            jni.codeUnit.setDataAt(jni.ptrName, dataType, "__jni_ptr_" + jni.name);
+            jni.codeUnit.setDataTypeAt(jni.ptrSignature, dataType);
+            jni.codeUnit.setDataTypeAt(jni.ptrFnPtr, dataType);
         }
         report.saveDynamicMethodMatch(apk, elf, signature, libName, jni, oldMethodName, methodName);
         return true;

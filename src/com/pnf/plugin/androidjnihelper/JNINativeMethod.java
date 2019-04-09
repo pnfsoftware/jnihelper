@@ -35,14 +35,17 @@ class JNINativeMethod {
     String name;
     String signature;
     long fnPtr;
+    INativeCodeUnit<?> codeUnit;
 
-    public JNINativeMethod(String name, String signature, long fnPtr, long ptrName, long ptrSignature, long ptrFnPtr) {
+    public JNINativeMethod(String name, String signature, long fnPtr, long ptrName, long ptrSignature, long ptrFnPtr,
+            INativeCodeUnit<?> codeUnit) {
         this.name = name;
         this.signature = signature;
         this.fnPtr = fnPtr;
         this.ptrName = ptrName;
         this.ptrSignature = ptrSignature;
         this.ptrFnPtr = ptrFnPtr;
+        this.codeUnit = codeUnit;
     }
 
     @Override
@@ -78,7 +81,8 @@ class JNINativeMethod {
                 // warn JEB for investigation (if enabled in parameters)
                 DynamicJNIDetectionPlugin.logger.catchingSilent(new JebRuntimeException(message));
             }
-            JNINativeMethod jni = new JNINativeMethod(name, signature, fnPtr, ptrName, ptrSignature, ptrFnPtr);
+            JNINativeMethod jni = new JNINativeMethod(name, signature, fnPtr, ptrName, ptrSignature, ptrFnPtr,
+                    codeUnit);
             ptrMutMethods.set(ptrFnPtr + vm.getSpaceBits() / 8);
             return jni;
         }
