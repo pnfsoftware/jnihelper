@@ -155,6 +155,9 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                         if(!codeUnit.isProcessed()) {
                             codeUnit.process();
                         }
+                        if(!codeUnit.isInitialAnalysisDone()) {
+                            codeUnit.performInitialAnalysis();
+                        }
                         // wait for process completed (can be performing background when user launch plugin)
                         while(!codeUnit.isAnalysisCompleted()) {
                             try {
