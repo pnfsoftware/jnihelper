@@ -84,7 +84,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
     public IPluginInformation getPluginInformation() {
         return new PluginInformation("Dynamic JNI Detection Plugin",
                 "Heuristically discover dynamically loaded JNI function and enable JEB to use them (debug)",
-                "PNF Software", Version.create(1, 0, 1), Version.create(3, 0, 9));
+                "PNF Software", Version.create(1, 0, 2), Version.create(3, 4, 0));
     }
 
     @Override
