@@ -18,6 +18,7 @@ import com.pnfsoftware.jeb.core.units.IUnit;
 import com.pnfsoftware.jeb.core.units.code.android.IApkUnit;
 import com.pnfsoftware.jeb.core.units.codeobject.ISymbolInformation;
 import com.pnfsoftware.jeb.util.format.Strings;
+import com.pnfsoftware.jeb.util.primitives.Integers;
 
 /**
  * JNI Report
@@ -147,10 +148,10 @@ public class JNIReport {
         Set<String>libs = new HashSet<>();
         libs.addAll(dynamicNativeMethodsPerLib.keySet());
         libs.addAll(staticNativeMethodsPerLib.keySet());
-        for (String lib : libs) {
-            stb.append("Found ").append(dynamicNativeMethodsPerLib.get(lib)).append(" dynamic method(s) and ")
-                    .append(staticNativeMethodsPerLib.get(lib)).append(" static method(s) for ").append(lib)
-                    .append(".\n");
+        for(String lib: libs) {
+            stb.append("Found ").append(Integers.safeInt(dynamicNativeMethodsPerLib.get(lib)))
+                    .append(" dynamic method(s) and ").append(Integers.safeInt(staticNativeMethodsPerLib.get(lib)))
+                    .append(" static method(s) for ").append(lib).append(".\n");
         }
         stb.append("------------------\n");
         return stb.toString();
