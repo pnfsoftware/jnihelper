@@ -21,6 +21,7 @@ package com.pnf.plugin.androidjnihelper;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -84,7 +85,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
     public IPluginInformation getPluginInformation() {
         return new PluginInformation("Dynamic JNI Detection Plugin",
                 "Heuristically discover dynamically loaded JNI function and enable JEB to use them (debug)",
-                "PNF Software", Version.create(1, 0, 2), Version.create(3, 4, 0));
+                "PNF Software", Version.create(1, 0, 3));
     }
 
     @Override
@@ -137,7 +138,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                         logger.debug("Processing %s:%s", elf.getName(),
                                 elf.getLoaderInformation().getTargetProcessor());
                         ISymbolInformation onload = null;
-                        List<? extends ISymbolInformation> symbols = elf.getExportedSymbols();
+                        Collection<? extends ISymbolInformation> symbols = elf.getExportedSymbols();
                         for(ISymbolInformation sym: symbols) {
                             if(sym.getName().equals("JNI_OnLoad")) {
                                 onload = sym;
@@ -190,7 +191,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                 for(IUnit so: sos) {
                     if(so instanceof IELFUnit) {
                         IELFUnit elf = (IELFUnit)so;
-                        List<? extends ISymbolInformation> symbols = elf.getExportedSymbols();
+                        Collection<? extends ISymbolInformation> symbols = elf.getExportedSymbols();
                         for(ISymbolInformation sym: symbols) {
                             if(sym.getName().startsWith("Java_")) {
                                 for(int i = 0; i < nativeMethods.size(); i++) {
@@ -408,7 +409,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
     }
 
     private void appendComment(IInteractiveUnit unit, String address, String newComment) {
-        String comment = unit.getComment(address);
+        String comment = unit.getPrimaryComment(address);
         if(comment != null) {
             if(comment.contains(newComment)) {
                 // already added (several run of plugin)
@@ -418,7 +419,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                 newComment = comment + "\n" + newComment;
             }
         }
-        unit.setComment(address, newComment);
+        unit.setPrimaryComment(address, newComment);
     }
 
     private IDexMethod getDexMethod(List<IDexMethod> nativeMethods, JNINativeMethod jni) {

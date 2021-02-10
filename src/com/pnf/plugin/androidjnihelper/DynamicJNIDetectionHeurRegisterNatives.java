@@ -32,9 +32,9 @@ import com.pnfsoftware.jeb.core.units.code.asm.cfg.BasicBlock;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.IEConverter;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.IERoutineContext;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.INativeDecompilerUnit;
+import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.EState;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.EUtil;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.IEGeneric;
-import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.IEState;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.IEStatement;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.IdRanges;
 import com.pnfsoftware.jeb.core.units.code.asm.items.INativeMethodItem;
@@ -102,7 +102,7 @@ public class DynamicJNIDetectionHeurRegisterNatives implements IDynamicJNIDetect
                             conv.getRegisterVariableFromNativeRegisterId(3)};
                     if(EUtil.resolveExpressionsBackward("RegisterNatives", conv, r, targets)) {
                         if(!hasVariable(targets[0]) && !hasVariable(targets[1])) {
-                            IEState state = ctx.getGlobalContext().buildState();
+                            EState state = ctx.getGlobalContext().buildState();
                             IVirtualMemory vm = codeUnit.getMemory();
                             state.setMemory(vm);
                             int nMethods;
@@ -154,8 +154,7 @@ public class DynamicJNIDetectionHeurRegisterNatives implements IDynamicJNIDetect
     }
 
     private static boolean hasVariable(IEGeneric ire) {
-        IdRanges use = new IdRanges();
-        ire.getUsed(use);
+        IdRanges use = ire.getUsed();
         return !use.getVarIds().isEmpty();
     }
 

@@ -52,16 +52,18 @@ public class DynamicJNIDetectionHeurFromMethodName implements IDynamicJNIDetecti
                     logger.info("JNI matching method name %s found @%Xh", str.getValue(), str.getBegin());
                     // get xref from string, this is generally the pointer array
                     Set<? extends IReference> xrefs = codeUnit.getCodeModel().getReferenceManager()
-                            .getReferencesToTarget(str.getBegin());
+                            .getReferencesTo(str.getBegin());
                     if(xrefs != null && !xrefs.isEmpty()) {
                         // can have same name shared across (for example, with different signature)
                         for(IReference xref: xrefs) {
-                            AtomicLong ptrMethods = new AtomicLong(xref.getAddress());
-                            IVirtualMemory vm = codeUnit.getMemory();
-                            // read one by one
-                            JNINativeMethod jni = JNINativeMethod.buildJNIFromMemPointer(codeUnit, vm, ptrMethods);
-                            if(jni != null) {
-                                registered.add(jni);
+                            if(xref.getTo().isInternalAddress()) {
+                                AtomicLong ptrMethods = new AtomicLong(xref.getTo().getInternalAddress());
+                                IVirtualMemory vm = codeUnit.getMemory();
+                                // read one by one
+                                JNINativeMethod jni = JNINativeMethod.buildJNIFromMemPointer(codeUnit, vm, ptrMethods);
+                                if(jni != null) {
+                                    registered.add(jni);
+                                }
                             }
                         }
                         break; // build potential jni, do not match signature here. Once method name is matched, no need to check others

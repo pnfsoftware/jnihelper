@@ -53,22 +53,24 @@ public class DynamicJNIDetectionHeurFromSignature implements IDynamicJNIDetectio
                 logger.info("JNI matching arg %s found @%Xh", str.getValue(), str.getBegin());
                 // get xref from string, this is generally the pointer array+1
                 Set<? extends IReference> xrefs = codeUnit.getCodeModel().getReferenceManager()
-                        .getReferencesToTarget(str.getBegin());
+                        .getReferencesTo(str.getBegin());
                 if(xrefs != null && !xrefs.isEmpty()) {
                     // can have same signature shared across
                     for(IReference xref: xrefs) {
-                        IVirtualMemory vm = codeUnit.getMemory();
-                        AtomicLong ptrMethods = new AtomicLong(xref.getAddress() - vm.getSpaceBits() / 8);
-                        if(ptrMethods.longValue() < 0) {
-                            continue;
-                        }
-                        JNINativeMethod jni = JNINativeMethod.buildJNIFromMemPointer(codeUnit, vm, ptrMethods);
-                        if(jni != null) {
-                            // validate that method name matches an existing JNI method name
-                            for(IDexMethod m: nativeMethods) {
-                                if(m.getName(true).equals(jni.name)) {
-                                    registered.add(jni);
-                                    break;
+                        if(xref.getTo().isInternalAddress()) {
+                            IVirtualMemory vm = codeUnit.getMemory();
+                            AtomicLong ptrMethods = new AtomicLong(xref.getTo().getInternalAddress() - vm.getSpaceBits() / 8);
+                            if(ptrMethods.longValue() < 0) {
+                                continue;
+                            }
+                            JNINativeMethod jni = JNINativeMethod.buildJNIFromMemPointer(codeUnit, vm, ptrMethods);
+                            if(jni != null) {
+                                // validate that method name matches an existing JNI method name
+                                for(IDexMethod m: nativeMethods) {
+                                    if(m.getName(true).equals(jni.name)) {
+                                        registered.add(jni);
+                                        break;
+                                    }
                                 }
                             }
                         }
