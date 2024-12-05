@@ -23,10 +23,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.pnfsoftware.jeb.core.units.INativeCodeUnit;
-import com.pnfsoftware.jeb.core.units.code.EntryPointDescription;
+import com.pnfsoftware.jeb.core.units.code.CodePointer;
 import com.pnfsoftware.jeb.core.units.code.IDecompilerUnit;
 import com.pnfsoftware.jeb.core.units.code.IFlowInformation;
 import com.pnfsoftware.jeb.core.units.code.IInstruction;
+import com.pnfsoftware.jeb.core.units.code.IdRanges;
 import com.pnfsoftware.jeb.core.units.code.android.dex.IDexMethod;
 import com.pnfsoftware.jeb.core.units.code.asm.cfg.BasicBlock;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.IEConverter;
@@ -36,7 +37,6 @@ import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.EState;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.EUtil;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.IEGeneric;
 import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.IEStatement;
-import com.pnfsoftware.jeb.core.units.code.asm.decompiler.ir.IdRanges;
 import com.pnfsoftware.jeb.core.units.code.asm.items.INativeMethodItem;
 import com.pnfsoftware.jeb.core.units.code.asm.memory.IVirtualMemory;
 import com.pnfsoftware.jeb.core.units.codeobject.ISymbolInformation;
@@ -63,7 +63,7 @@ public class DynamicJNIDetectionHeurRegisterNatives implements IDynamicJNIDetect
         List<JNINativeMethod> registered = new ArrayList<>();
 
         // Retrieve method JNI_OnLoad
-        EntryPointDescription ep = codeUnit.getProcessor()
+        CodePointer ep = codeUnit.getProcessor()
                 .createEntryPoint(codeUnit.getVirtualImageBase() + onload.getSymbolRelativeAddress());
         INativeMethodItem method = codeUnit.getInternalMethod(ep.getAddress(), true);
         if(method == null) {

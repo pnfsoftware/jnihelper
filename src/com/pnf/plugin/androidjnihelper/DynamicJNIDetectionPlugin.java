@@ -85,7 +85,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
     public IPluginInformation getPluginInformation() {
         return new PluginInformation("Dynamic JNI Detection Plugin",
                 "Heuristically discover dynamically loaded JNI function and enable JEB to use them (debug)",
-                "PNF Software", Version.create(1, 0, 3));
+                "PNF Software", Version.create(1, 0, 4));
     }
 
     @Override
@@ -111,7 +111,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
             return;
         }
         for(IApkUnit apk: apkUnits) {
-            IUnit libs = apk.getLibrariesUnit();
+            IUnit libs = apk.getLibraries();
             if(libs == null) {
                 logger.info("Native libraries not found");
                 continue;
@@ -197,7 +197,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                                 for(int i = 0; i < nativeMethods.size(); i++) {
                                     IDexMethod m = nativeMethods.get(i);
                                     String sig = m.getSignature(true);
-                                    String[] names = DexUtil.toJniName(sig);
+                                    String[] names = DexUtil.generateDefaultJniNames(sig);
                                     for(String name: names) {
                                         if(name.equals(sym.getName())) {
                                             logger.debug("Found static JNI method: %s", sym.getName());
@@ -409,7 +409,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
     }
 
     private void appendComment(IInteractiveUnit unit, String address, String newComment) {
-        String comment = unit.getPrimaryComment(address);
+        String comment = unit.getInlineComment(address);
         if(comment != null) {
             if(comment.contains(newComment)) {
                 // already added (several run of plugin)
@@ -419,7 +419,7 @@ public class DynamicJNIDetectionPlugin extends AbstractEnginesPlugin {
                 newComment = comment + "\n" + newComment;
             }
         }
-        unit.setPrimaryComment(address, newComment);
+        unit.setInlineComment(address, newComment);
     }
 
     private IDexMethod getDexMethod(List<IDexMethod> nativeMethods, JNINativeMethod jni) {
